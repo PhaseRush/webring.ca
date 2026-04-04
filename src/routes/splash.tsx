@@ -217,11 +217,14 @@ const TYPE_COLORS: Record<string, string> = {
 }
 
 function MembersContent({ active }: { active: Member[] }) {
+  const displayed = active.slice(0, 6)
+  const remaining = active.length - displayed.length
+
   return (
     <div class="members-inner">
       <h2 class="members-title">The Ring</h2>
       <div class="members-grid">
-        {active.map((m, i) => {
+        {displayed.map((m, i) => {
           const color = TYPE_COLORS[m.type] ?? TYPE_COLORS.other
           return (
             <a href={m.url} target="_blank" rel="noopener noreferrer" class="member-card" style={`--card-accent: ${color}; animation-delay: ${i * 0.1}s`}>
@@ -238,6 +241,9 @@ function MembersContent({ active }: { active: Member[] }) {
           )
         })}
       </div>
+      {remaining > 0 && (
+        <p class="members-more">+{remaining} more on the ring</p>
+      )}
     </div>
   )
 }
@@ -525,11 +531,13 @@ app.get('/', async (c) => {
               fill: var(--accent);
               opacity: 0;
               animation: pulse 2.5s ease-out infinite;
+              transform-box: fill-box;
+              transform-origin: center;
             }
 
             @keyframes pulse {
-              0% { opacity: 0.4; r: 7; }
-              100% { opacity: 0; r: 22; }
+              0% { opacity: 0.4; transform: scale(1); }
+              100% { opacity: 0; transform: scale(3); }
             }
 
             .map-label {
@@ -639,6 +647,13 @@ app.get('/', async (c) => {
 
             .member-card:hover .member-card-arrow {
               color: var(--card-accent);
+            }
+
+            .members-more {
+              font-family: 'Space Mono', monospace;
+              font-size: 0.8rem;
+              color: var(--fg-muted);
+              letter-spacing: 0.05em;
             }
 
             @media (max-width: 767px) {
