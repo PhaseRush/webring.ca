@@ -11,3 +11,5 @@ dist/
 .impeccable.md
 docs/superpowers/
 .codex
+.claude/
+.playwright-mcp/

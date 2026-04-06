@@ -4,6 +4,10 @@ compatibility_date = "2025-01-01"
 
 # Replace PLACEHOLDER_KV_ID and PLACEHOLDER_PREVIEW_KV_ID with actual KV namespace IDs.
 # Create them with: npx wrangler kv namespace create WEBRING
+routes = [
+  { pattern = "webring.ca", custom_domain = true }
+]
+
 [[kv_namespaces]]
 binding = "WEBRING"
 id = "a81c3dd88c5445c2b75c4ba51d091750"
