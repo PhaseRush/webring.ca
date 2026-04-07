@@ -1,8 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { runHealthCheck } from '../cron/healthcheck'
 import { detectWidget, extractScriptUrls, detectWidgetInBundle } from '../utils/widget'
+import { notifyDiscord } from '../cron/notify'
 import { createMockKV } from './kv-mock'
 import type { Member, HealthStatus } from '../types'
+
+vi.mock('../cron/notify', () => ({
+  notifyDiscord: vi.fn(),
+}))
 
 const VALID_WIDGET = '<div data-webring="ca" data-member="alice"></div><a href="https://webring.ca/prev/alice">prev</a><a href="https://webring.ca/next/alice">next</a><script src="https://webring.ca/embed.js"></script>'
 
@@ -440,36 +445,29 @@ describe('runHealthCheck', () => {
       members: JSON.stringify([alice]),
       'health:alice': JSON.stringify(prevStatus),
     })
-    const webhookUrl = 'https://discord.com/api/webhooks/test'
-    mockFetch({
-      'https://alice.example.com': 'error',
-      [webhookUrl]: { ok: true, status: 200, body: '' },
-    })
-    await runHealthCheck(kv, webhookUrl)
+    mockFetch({ 'https://alice.example.com': 'error' })
 
-    const calls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls
-    const webhookCall = calls.find(([url]) => url === webhookUrl)
-    expect(webhookCall).toBeDefined()
-    const body = JSON.parse(webhookCall![1].body)
-    expect(body.embeds[0].title).toBe('Alice deactivated')
+    await runHealthCheck(kv, 'https://discord.com/api/webhooks/test')
+
+    expect(notifyDiscord).toHaveBeenCalledWith(
+      'https://discord.com/api/webhooks/test',
+      [expect.objectContaining({ event: 'deactivated', reason: 'unreachable' })],
+    )
   })
 
   it('sends Discord notification on reactivation', async () => {
     const inactiveAlice = { ...alice, active: false }
     const kv = createMockKV({ members: JSON.stringify([inactiveAlice]) })
-    const webhookUrl = 'https://discord.com/api/webhooks/test'
     mockFetch({
       'https://alice.example.com': { ok: true, status: 200, body: VALID_WIDGET },
-      [webhookUrl]: { ok: true, status: 200, body: '' },
     })
 
-    await runHealthCheck(kv, webhookUrl)
+    await runHealthCheck(kv, 'https://discord.com/api/webhooks/test')
 
-    const calls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls
-    const webhookCall = calls.find(([url]) => url === webhookUrl)
-    expect(webhookCall).toBeDefined()
-    const body = JSON.parse(webhookCall![1].body)
-    expect(body.embeds[0].title).toBe('Alice reactivated')
+    expect(notifyDiscord).toHaveBeenCalledWith(
+      'https://discord.com/api/webhooks/test',
+      [expect.objectContaining({ event: 'reactivated' })],
+    )
   })
 
   it('does not send Discord notification when no transitions', async () => {
@@ -478,11 +476,11 @@ describe('runHealthCheck', () => {
       'https://alice.example.com': { ok: true, status: 200, body: VALID_WIDGET },
     })
 
-    const webhookUrl = 'https://discord.com/api/webhooks/test'
-    await runHealthCheck(kv, webhookUrl)
+    await runHealthCheck(kv, 'https://discord.com/api/webhooks/test')
 
-    const calls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls
-    const webhookCall = calls.find(([url]) => url === webhookUrl)
-    expect(webhookCall).toBeUndefined()
+    expect(notifyDiscord).toHaveBeenCalledWith(
+      'https://discord.com/api/webhooks/test',
+      [],
+    )
   })
 })
