@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { resolve } from 'node:path'
 import { detectWidget } from '../src/utils/widget'
 import { hasResolvableMemberCoordinates } from '../src/utils/member-coords'
@@ -40,7 +40,7 @@ let baseMembers: MemberInput[] = []
 try {
   const ref = process.env.PR_BASE_SHA
     || (process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : 'main')
-  const base = execSync(`git show ${ref}:members.json`, {
+  const base = execFileSync('git', ['show', `${ref}:members.json`], {
     encoding: 'utf-8',
     stdio: ['pipe', 'pipe', 'pipe'],
   })
@@ -151,7 +151,7 @@ for (const { current, base, changedFields } of editedMembers) {
 
           const body = await res.text()
           if (detectWidget(body, current.slug)) {
-            write('- PASS: Webring widget detected (marker + prev/next links)')
+            write('- PASS: Webring widget detected')
           } else {
             write('- INFO: Widget not detected on new URL. Make sure to install the widget — see https://github.com/stanleypangg/webring.ca#add-the-widget')
           }
@@ -247,7 +247,7 @@ for (const member of newMembers) {
 
       const body = await res.text()
       if (detectWidget(body, member.slug)) {
-        write('- PASS: Webring widget detected (marker + prev/next links)')
+        write('- PASS: Webring widget detected')
       } else {
         write('- INFO: Widget not detected yet. Install the widget before or after merge — see https://github.com/stanleypangg/webring.ca#add-the-widget')
       }

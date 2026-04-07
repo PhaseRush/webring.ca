@@ -20,8 +20,19 @@ function escapeRegex(value: string): string {
 export function detectWidget(html: string, slug?: string): boolean {
   const stripped = html.toLowerCase().replace(/<!--[\s\S]*?-->/g, '')
   const hasMarker = stripped.includes('data-webring="ca"') || stripped.includes('webring.ca/embed.js')
+  if (!hasMarker) return false
+
+  // embed.js path: script tag + matching data-member is sufficient
+  // because embed.js renders prev/next links client-side in a Shadow DOM
+  const hasEmbedScript = stripped.includes('webring.ca/embed.js')
+  if (hasEmbedScript) {
+    if (!slug) return true
+    return new RegExp(`data-member=["']${escapeRegex(slug.toLowerCase())}["']`).test(stripped)
+  }
+
+  // Manual widget path: requires prev + next links in raw HTML
   const slugPattern = slug ? escapeRegex(slug.toLowerCase()) : '[a-z0-9-]+'
   const hasPrev = new RegExp(`href=["'][^"']*webring\\.ca/prev/${slugPattern}(?:[?#/][^"']*)?["']`).test(stripped)
   const hasNext = new RegExp(`href=["'][^"']*webring\\.ca/next/${slugPattern}(?:[?#/][^"']*)?["']`).test(stripped)
-  return hasMarker && hasPrev && hasNext
+  return hasPrev && hasNext
 }

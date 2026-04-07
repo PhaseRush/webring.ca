@@ -48,9 +48,40 @@ describe('detectWidget', () => {
     expect(detectWidget(html)).toBe(false)
   })
 
-  it('rejects marker without prev/next links', () => {
-    const html = '<div data-webring="ca"></div><script src="https://webring.ca/embed.js"></script>'
+  it('rejects marker alone without embed script or prev/next links', () => {
+    const html = '<div data-webring="ca"></div>'
     expect(detectWidget(html)).toBe(false)
+  })
+
+  // embed.js detection path
+  it('accepts embed.js script with matching data-member slug', () => {
+    const html = '<div data-webring="ca" data-member="alice"></div><script src="https://webring.ca/embed.js" defer></script>'
+    expect(detectWidget(html, 'alice')).toBe(true)
+  })
+
+  it('accepts embed.js script without slug parameter', () => {
+    const html = '<div data-webring="ca" data-member="alice"></div><script src="https://webring.ca/embed.js"></script>'
+    expect(detectWidget(html)).toBe(true)
+  })
+
+  it('rejects embed.js script with wrong data-member slug', () => {
+    const html = '<div data-webring="ca" data-member="bob"></div><script src="https://webring.ca/embed.js"></script>'
+    expect(detectWidget(html, 'alice')).toBe(false)
+  })
+
+  it('rejects embed.js script without data-member attribute when slug checked', () => {
+    const html = '<div data-webring="ca"></div><script src="https://webring.ca/embed.js"></script>'
+    expect(detectWidget(html, 'alice')).toBe(false)
+  })
+
+  it('rejects embed.js script hidden in HTML comment', () => {
+    const html = '<!-- <script src="https://webring.ca/embed.js"></script> --><div data-webring="ca" data-member="alice"></div>'
+    expect(detectWidget(html, 'alice')).toBe(false)
+  })
+
+  it('embed.js does not require prev/next links in HTML', () => {
+    const html = '<div data-webring="ca" data-member="alice"></div><script src="https://webring.ca/embed.js"></script>'
+    expect(detectWidget(html, 'alice')).toBe(true)
   })
 
   it('rejects prev/next links without marker', () => {
@@ -270,6 +301,21 @@ describe('runHealthCheck', () => {
 
     const memberPuts = putSpy.mock.calls.filter(([key]) => key === 'members')
     expect(memberPuts).toHaveLength(0)
+  })
+
+  it('marks embed.js sites as ok without prev/next links in HTML', async () => {
+    const kv = createMockKV({ members: JSON.stringify([alice]) })
+    const embedHtml = '<div data-webring="ca" data-member="alice"></div><script src="https://webring.ca/embed.js" defer></script>'
+    mockFetch({
+      'https://alice.example.com': { ok: true, status: 200, body: embedHtml },
+    })
+
+    await runHealthCheck(kv)
+
+    const raw = await kv.get('health:alice')
+    const status: HealthStatus = JSON.parse(raw!)
+    expect(status.status).toBe('ok')
+    expect(status.consecutiveFails).toBe(0)
   })
 
   it('handles multiple members in parallel', async () => {
