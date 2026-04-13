@@ -103,10 +103,16 @@ body {
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   contain: layout style paint;
+  visibility: hidden;
+}
+
+.panel.is-nearby {
+  visibility: visible;
   pointer-events: none;
 }
 
 .panel.is-active-panel {
+  visibility: visible;
   pointer-events: auto;
 }
 
