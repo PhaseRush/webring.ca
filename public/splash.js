@@ -72,27 +72,6 @@
   layoutPanels();
   renderTrack();
 
-  // ── Flatten/unflatten: remove 3D transforms when settled so Chrome
-  //    uses standard 2D hit-testing (works around a macOS Chrome bug where
-  //    the GPU compositor miscalculates hit regions for preserve-3d panels).
-  function flatten(activeIdx) {
-    track.style.transformStyle = 'flat';
-    track.style.webkitTransformStyle = 'flat';
-    track.style.transform = 'none';
-    panels[activeIdx].style.transform = 'none';
-    panels.forEach(function(p, i) {
-      if (i !== activeIdx) p.classList.remove('is-nearby');
-    });
-  }
-
-  function unflatten() {
-    track.style.transformStyle = 'preserve-3d';
-    track.style.webkitTransformStyle = 'preserve-3d';
-    layoutPanels();
-    renderTrack();
-    updatePanelVisibility(prevActiveIdx);
-  }
-
   // ── Tick ──
   var rafId = 0;
 
@@ -104,7 +83,6 @@
     if (isSettled) {
       isSettled = false;
       track.style.willChange = 'transform';
-      unflatten();
       ring.dispatchEvent(new CustomEvent('panelunsettle'));
     }
     startTick();
@@ -335,7 +313,6 @@
     // Stop loop when settled -- restarts on next input via startTick()
     if (!isSettled && currentAngle === targetAngle) {
       isSettled = true;
-      flatten(norm);
       track.style.willChange = 'auto';
       ring.dispatchEvent(new CustomEvent('panelsettle', { detail: { index: norm } }));
       return;
@@ -352,7 +329,6 @@
   prevActiveIdx = initIdx;
   dots.forEach(function(dot, i) { dot.classList.toggle('is-active', i === initIdx); });
   updatePanelVisibility(initIdx);
-  flatten(initIdx);
   ring.dispatchEvent(new CustomEvent('panelsettle', { detail: { index: initIdx } }));
 
   // ── Pause when hidden ──
@@ -378,7 +354,6 @@
     radius = computeRadius();
     layoutPanels();
     renderTrack();
-    if (isSettled) flatten(prevActiveIdx);
   });
 })();
 
